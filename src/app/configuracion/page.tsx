@@ -20,6 +20,10 @@ export default function ConfiguracionPage() {
   const [selectedSlug, setSelectedSlug] = useState("");
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+
   useEffect(() => {
     void (async () => {
       const [settingsRes, techniquesRes] = await Promise.all([
@@ -65,6 +69,65 @@ export default function ConfiguracionPage() {
       }),
     });
     notify(response.ok ? `Técnica "${selected.name}" guardada.` : "Error al guardar la técnica.");
+  }
+
+  async function createTechnique() {
+    const name = newName.trim();
+    if (!name) return;
+    setCreating(true);
+    try {
+      const response = await fetch("/api/techniques", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, active: false }),
+      });
+      if (response.ok) {
+        const created = (await response.json()) as TechniqueDTO;
+        setTechniques((prev) => [...prev, created]);
+        setSelectedSlug(created.slug);
+        setNewName("");
+        setShowNewForm(false);
+        notify(`Técnica "${created.name}" creada.`);
+      } else {
+        const err = (await response.json()) as { error?: string };
+        notify(err.error ?? "Error al crear técnica.");
+      }
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function deleteTechnique(tech: TechniqueDTO) {
+    if (!confirm(`¿Eliminar la técnica "${tech.name}"?`)) return;
+    const response = await fetch(`/api/techniques/${tech.id}`, { method: "DELETE" });
+    if (response.ok) {
+      setTechniques((prev) => prev.filter((t) => t.id !== tech.id));
+      if (selectedSlug === tech.slug) {
+        setSelectedSlug("");
+      }
+      notify(`Técnica "${tech.name}" eliminada.`);
+    } else {
+      const err = (await response.json()) as { error?: string };
+      notify(err.error ?? "Error al eliminar.");
+    }
+  }
+
+  async function toggleActive(tech: TechniqueDTO) {
+    const next = !tech.active;
+    setTechniques((prev) =>
+      prev.map((t) => (t.id === tech.id ? { ...t, active: next } : t)),
+    );
+    const response = await fetch(`/api/techniques/${tech.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: next }),
+    });
+    if (!response.ok) {
+      setTechniques((prev) =>
+        prev.map((t) => (t.id === tech.id ? { ...t, active: !next } : t)),
+      );
+      notify("Error al actualizar estado.");
+    }
   }
 
   return (
@@ -152,31 +215,107 @@ export default function ConfiguracionPage() {
               </CardBody>
             </Card>
           )}
+
+          {/* Lista rapida de tecnicas con toggle */}
+          <Card>
+            <CardHeader
+              title="Técnicas"
+              subtitle={`${techniques.filter((t) => t.active).length} activas / ${techniques.length} total`}
+              action={
+                <Button
+                  variant="secondary"
+                  className="text-xs"
+                  onClick={() => {
+                    setShowNewForm(!showNewForm);
+                    setNewName("");
+                  }}
+                >
+                  + Nueva
+                </Button>
+              }
+            />
+            <CardBody className="space-y-1.5">
+              {showNewForm && (
+                <div className="mb-3 flex gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+                  <Input
+                    placeholder="Nombre de la técnica"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void createTechnique();
+                      if (e.key === "Escape") setShowNewForm(false);
+                    }}
+                    autoFocus
+                    className="flex-1"
+                  />
+                  <Button onClick={() => void createTechnique()} disabled={creating || !newName.trim()}>
+                    Crear
+                  </Button>
+                  <Button variant="ghost" onClick={() => setShowNewForm(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+
+              {techniques.map((tech) => (
+                <div
+                  key={tech.id}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${
+                    tech.slug === selectedSlug
+                      ? "border-red-200 bg-red-50/50"
+                      : "border-transparent hover:bg-slate-50"
+                  } ${!tech.active ? "opacity-60" : ""}`}
+                >
+                  <button
+                    className="flex-1 cursor-pointer text-left"
+                    onClick={() => setSelectedSlug(tech.slug)}
+                  >
+                    <span className="text-sm font-medium text-slate-800">{tech.name}</span>
+                    <span className="ml-2 text-xs text-slate-400">/{tech.slug}</span>
+                  </button>
+
+                  {tech.active ? (
+                    <Badge tone="green">Activa</Badge>
+                  ) : (
+                    <Badge tone="slate">Inactiva</Badge>
+                  )}
+
+                  <button
+                    onClick={() => void toggleActive(tech)}
+                    className={`relative h-5 w-9 cursor-pointer rounded-full transition-colors ${
+                      tech.active ? "bg-emerald-500" : "bg-slate-300"
+                    }`}
+                    title={tech.active ? "Desactivar" : "Activar"}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        tech.active ? "translate-x-4" : ""
+                      }`}
+                    />
+                  </button>
+
+                  <button
+                    onClick={() => void deleteTechnique(tech)}
+                    className="ml-1 cursor-pointer text-slate-300 transition-colors hover:text-red-500"
+                    title="Eliminar"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </CardBody>
+          </Card>
         </div>
 
         <div className="space-y-4">
           <Card>
             <CardHeader
-              title="Técnicas"
-              subtitle="Cada técnica tiene sus propios costos operativos"
-              action={
-                selected ? (
-                  <Select
-                    value={selectedSlug}
-                    onChange={(e) => setSelectedSlug(e.target.value)}
-                    className="w-auto"
-                  >
-                    {techniques.map((t) => (
-                      <option key={t.slug} value={t.slug}>
-                        {t.name}
-                        {t.active ? "" : " (inactiva)"}
-                      </option>
-                    ))}
-                  </Select>
-                ) : undefined
-              }
+              title="Detalle de técnica"
+              subtitle={selected ? `Editando: ${selected.name}` : "Selecciona una técnica de la izquierda"}
             />
-            {selected && (
+            {selected ? (
               <CardBody className="space-y-4">
                 <div className="flex items-end gap-3">
                   <div className="flex-1">
@@ -373,8 +512,14 @@ export default function ConfiguracionPage() {
                 </Section>
 
                 <Button onClick={() => void saveTechnique()}>
-                  Guardar técnica “{selected.name}”
+                  Guardar técnica "{selected.name}"
                 </Button>
+              </CardBody>
+            ) : (
+              <CardBody>
+                <p className="py-8 text-center text-sm text-slate-400">
+                  Selecciona una técnica de la lista para ver y editar su configuración.
+                </p>
               </CardBody>
             )}
           </Card>
