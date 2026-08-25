@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Technique {
+  id     String  @id @default(cuid())
+  slug   String  @unique
+  name   String
+  active Boolean @default(false)
+  config Json
+
+  quotes Quote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GlobalSettings {
+  id       String @id @default("singleton")
+  currency String @default("USD")
+  margins  Json
+  rounding Json
+
+  updatedAt DateTime @updatedAt
+}
+
+model Quote {
+  id          String   @id @default(cuid())
+  folio       String   @unique
+  clientName  String?
+  productName String
+  quantity    Int
+  snapshot    Json
+  createdAt   DateTime @default(now())
+
+  techniqueId String
+  technique   Technique @relation(fields: [techniqueId], references: [id])
+}
