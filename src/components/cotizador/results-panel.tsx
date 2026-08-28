@@ -39,13 +39,17 @@ export function ResultsPanel({ result, currency }: ResultsPanelProps) {
           {dimensions && (
             <div className="mb-1 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
               Área: <strong>{dimensions.areaCm2} cm²</strong> ({dimensions.widthMm}×{dimensions.heightMm} mm){" "}
-              | Tiempo est. grabado: <strong>{formatMinutes(dimensions.estimatedSeconds)} min</strong>{" "}
+              | Tiempo estimado: <strong>{formatMinutes(dimensions.estimatedSeconds)} min</strong>{" "}
+              | Tiempo a cobrar: <strong>{formatMinutes(dimensions.chargeableSeconds)} min</strong>{" "}
               @ {dimensions.secondsPerCm2} s/cm²
+              {dimensions.includedSeconds > 0 && (
+                <> (primeros {dimensions.includedSeconds}s incluidos)</>
+              )}
             </div>
           )}
           <CostLine label="Producto base" value={cost.productBase} currency={currency} />
           <CostLine
-            label={`Máquina · ${cost.machine.minutes} min × ${formatMoney(cost.machine.costPerMinute, currency)}/min`}
+            label={`Máquina · ${formatMinutes(cost.machine.minutes)} min × ${formatMoney(cost.machine.costPerMinute, currency)}/min`}
             value={cost.machine.total}
             currency={currency}
           />
@@ -71,7 +75,11 @@ export function ResultsPanel({ result, currency }: ResultsPanelProps) {
               muted
             />
           </div>
-          {cost.extraEngraving.extraSeconds > 0 ? (
+          {dimensions ? (
+            <p className="text-xs text-slate-400">
+              El tiempo a cobrar del grabado ya está incluido en la línea de máquina.
+            </p>
+          ) : cost.extraEngraving.extraSeconds > 0 ? (
             <CostLine
               label={`Segundos extra · ${cost.extraEngraving.extraSeconds}s × ${formatMoney(cost.extraEngraving.costPerSecond, currency)}`}
               value={cost.extraEngraving.total}

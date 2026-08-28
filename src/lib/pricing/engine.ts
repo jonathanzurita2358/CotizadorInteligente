@@ -86,12 +86,17 @@ export function calculateQuote(
       ? config.secondsPerCm2
       : DEFAULT_SECONDS_PER_CM2;
 
+  const includedSeconds = config.extraSeconds.includedSeconds;
+
   const hasDimensions =
     input.widthMm !== undefined && input.heightMm !== undefined;
 
   let dimensions: EngravingDimensions | undefined;
-  let engravedSeconds = input.totalEngravedSeconds;
   let machineMinutes = input.machineMinutes;
+  // En el camino sin dimensiones, el grabado extra se cobra por segundo.
+  let extraSeconds = 0;
+  let engravedSeconds = input.totalEngravedSeconds;
+  let machineBasedEngraving = false;
 
   if (hasDimensions) {
     const { areaMm2, areaCm2, estimatedSeconds } = estimateEngravingSeconds(
@@ -99,6 +104,7 @@ export function calculateQuote(
       input.heightMm as number,
       secondsPerCm2,
     );
+    const chargeableSeconds = Math.max(0, estimatedSeconds - includedSeconds);
     dimensions = {
       widthMm: input.widthMm as number,
       heightMm: input.heightMm as number,
@@ -106,9 +112,14 @@ export function calculateQuote(
       areaCm2: round2(areaCm2),
       estimatedSeconds,
       secondsPerCm2,
+      includedSeconds,
+      chargeableSeconds,
+      chargeableMinutes: chargeableSeconds / 60,
     };
     engravedSeconds = estimatedSeconds;
-    machineMinutes = input.machineMinutes + estimatedSeconds / 60;
+    // El tiempo sobrante (tras los incluidos) se convierte en minutos de máquina cobrables.
+    machineMinutes = input.machineMinutes + chargeableSeconds / 60;
+    machineBasedEngraving = true;
   }
 
   const productBase = round2(input.baseProductCost);
@@ -129,9 +140,11 @@ export function calculateQuote(
   const wasteBase = productBase;
   const wasteTotal = wasteBase * (config.wastePercentOverMaterials / 100);
 
-  const includedSeconds = config.extraSeconds.includedSeconds;
-  const extraSeconds = Math.max(0, engravedSeconds - includedSeconds);
-  const extraEngravingTotal = extraSeconds * config.extraSeconds.costPerSecond;
+  if (!machineBasedEngraving) {
+    extraSeconds = Math.max(0, input.totalEngravedSeconds - includedSeconds);
+  }
+  const extraEngravingTotal =
+    machineBasedEngraving ? 0 : extraSeconds * config.extraSeconds.costPerSecond;
 
   const operationalTotal =
     electricityTotal + laborTotal + maintenanceTotal + wasteTotal;

@@ -222,19 +222,35 @@ describe("calculateQuote — dimensiones de grabado y tiempo por área", () => {
     expect(result.dimensions!.estimatedSeconds).toBe(30);
   });
 
-  it("recalcula los minutos de máquina y el costo de máquina en función del área", () => {
+  it("recalcula los minutos de máquina y el costo de máquina con el tiempo a cobrar (tras restar los incluidos)", () => {
     const result = calculateQuote(
-      { ...baseInput, widthMm: 50, heightMm: 30 },
+      { ...baseInput, widthMm: 100, heightMm: 60 },
       { ...fixtureConfig, secondsPerCm2: 2, machineCostPerMinute: 2.5 },
       fixtureMargins,
       fixtureRounding,
     );
-    // 15 cm² × 2 s/cm² = 30 s extra = 0.5 min sobre los 30 min base -> 30.5 min
-    const expectedMachineMinutes =
-      baseInput.machineMinutes + result.dimensions!.estimatedSeconds / 60;
-    expect(expectedMachineMinutes).toBeCloseTo(30.5, 6);
-    expect(result.cost.machine.minutes).toBeCloseTo(30.5, 6);
-    expect(result.cost.machine.total).toBeCloseTo(30.5 * 2.5, 6);
+    // 60 cm² × 2 s/cm² = 120 s estimados; 60 s incluidos -> 60 s a cobrar = 1 min extra.
+    expect(result.dimensions!.estimatedSeconds).toBe(120);
+    expect(result.dimensions!.includedSeconds).toBe(60);
+    expect(result.dimensions!.chargeableSeconds).toBe(60);
+    expect(result.dimensions!.chargeableMinutes).toBe(1);
+    // 30 min base + 1 min de grabado
+    expect(result.cost.machine.minutes).toBeCloseTo(31, 6);
+    expect(result.cost.machine.total).toBeCloseTo(31 * 2.5, 6);
+    // En el camino por área no se cobra por segundo adicional.
+    expect(result.cost.extraEngraving.total).toBe(0);
+  });
+
+  it("no suma minutos de máquina cuando el área cae dentro de los segundos incluidos", () => {
+    const result = calculateQuote(
+      { ...baseInput, widthMm: 50, heightMm: 30 },
+      { ...fixtureConfig, secondsPerCm2: 2 },
+      fixtureMargins,
+      fixtureRounding,
+    );
+    // 15 cm² × 2 s = 30 s < 60 s incluidos -> 0 s a cobrar.
+    expect(result.dimensions!.chargeableSeconds).toBe(0);
+    expect(result.cost.machine.minutes).toBe(baseInput.machineMinutes);
   });
 
   it("usa por defecto 15 s/cm² cuando la técnica no define secondsPerCm2", () => {

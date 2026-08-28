@@ -60,7 +60,6 @@ export interface MachineCostLine {
   costPerMinute: number;
   total: number;
 }
-
 export interface PreparationCostLine {
   optionId: string;
   label: string;
@@ -91,6 +90,12 @@ export interface EngravingDimensions {
   /** Segundos de grabado estimados según el área y la velocidad configurada. */
   estimatedSeconds: number;
   secondsPerCm2: number;
+  /** Segundos incluidos en la preparación que no se cobran (free). */
+  includedSeconds: number;
+  /** Segundos efectivamente cobrables tras restar los incluidos. */
+  chargeableSeconds: number;
+  /** Minutos de máquina cobrables por el grabado (= chargeableSeconds / 60). */
+  chargeableMinutes: number;
 }
 
 export interface CostBreakdown {

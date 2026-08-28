@@ -107,6 +107,13 @@ export default async function QuoteDetailPage({
                   plain
                 />
               )}
+              {snap.result?.dimensions && (
+                <Row
+                  label="Tiempo est. / a cobrar"
+                  value={`${(snap.result.dimensions.estimatedSeconds / 60).toFixed(1)} / ${(snap.result.dimensions.chargeableSeconds / 60).toFixed(1)} min`}
+                  plain
+                />
+              )}
             </CardBody>
           </Card>
 

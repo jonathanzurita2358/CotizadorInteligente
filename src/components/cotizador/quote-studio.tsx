@@ -277,6 +277,7 @@ export function QuoteStudio() {
               onWidthChange={setWidthMm}
               onHeightChange={setHeightMm}
               secondsPerCm2={technique?.config.secondsPerCm2}
+              includedSeconds={technique?.config.extraSeconds.includedSeconds}
             />
           </CardBody>
         </Card>
@@ -348,18 +349,22 @@ function DimensionsField({
   onWidthChange,
   onHeightChange,
   secondsPerCm2,
+  includedSeconds = 0,
 }: {
   widthMm: string;
   heightMm: string;
   onWidthChange: (v: string) => void;
   onHeightChange: (v: string) => void;
   secondsPerCm2?: number;
+  includedSeconds?: number;
 }) {
   const w = widthMm === "" ? NaN : Number(widthMm);
   const h = heightMm === "" ? NaN : Number(heightMm);
   const hasDimensions = widthMm !== "" && heightMm !== "";
   const area = hasDimensions && !Number.isNaN(w) && !Number.isNaN(h) ? w * h : NaN;
   const rate = secondsPerCm2 !== undefined && secondsPerCm2 > 0 ? secondsPerCm2 : 15;
+  const estimatedSeconds = hasDimensions && !Number.isNaN(area) ? (area / 100) * rate : 0;
+  const chargeableSeconds = Math.max(0, estimatedSeconds - includedSeconds);
 
   return (
     <fieldset className="rounded-lg border border-slate-200 p-3">
@@ -395,7 +400,9 @@ function DimensionsField({
       {hasDimensions && !Number.isNaN(area) && (
         <p className="mt-2 text-[11px] text-slate-500">
           Área: {formatNumber(area / 100)} cm² ({w}×{h} mm){" "}
-          | Tiempo est. grabado: {formatNumber((area / 100) * rate / 60)} min @ {rate} s/cm²
+          | Tiempo estimado: {formatNumber(estimatedSeconds / 60)} min{" "}
+          | Tiempo a cobrar: {formatNumber(chargeableSeconds / 60)} min @ {rate} s/cm²
+          {includedSeconds > 0 && <> (primeros {includedSeconds}s incluidos)</>}
         </p>
       )}
     </fieldset>
