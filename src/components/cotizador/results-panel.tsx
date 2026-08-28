@@ -26,7 +26,7 @@ export function ResultsPanel({ result, currency }: ResultsPanelProps) {
     );
   }
 
-  const { cost, prices, totals, quantity, volumeDiscountPercent } = result;
+  const { cost, prices, totals, quantity, volumeDiscountPercent, dimensions } = result;
 
   return (
     <div className="space-y-4">
@@ -36,6 +36,15 @@ export function ResultsPanel({ result, currency }: ResultsPanelProps) {
           subtitle="Lo que te cuesta producir una pieza — no se muestra al cliente"
         />
         <CardBody className="space-y-1.5">
+          {dimensions && (
+            <div className="mb-1 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              Dimensiones de grabado: <strong>{dimensions.widthMm} × {dimensions.heightMm} mm</strong> ={" "}
+              {dimensions.areaMm2} mm² / {dimensions.areaCm2} cm²
+              {dimensions.estimatedSeconds > 0 && (
+                <> · tiempo estimado ≈ {Math.round(dimensions.estimatedSeconds)} s</>
+              )}
+            </div>
+          )}
           <CostLine label="Producto base" value={cost.productBase} currency={currency} />
           <CostLine
             label={`Máquina · ${cost.machine.minutes} min × ${formatMoney(cost.machine.costPerMinute, currency)}/min`}

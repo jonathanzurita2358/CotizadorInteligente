@@ -3,6 +3,7 @@ import { resolveVolumeDiscount } from "./volume";
 import {
   PricingError,
   type CostBreakdown,
+  type EngravingDimensions,
   type MarginConfig,
   type PricePoint,
   type PriceTierLabel,
@@ -16,6 +17,18 @@ function assertNonNegative(value: number, field: string): void {
   if (typeof value !== "number" || Number.isNaN(value) || value < 0) {
     throw new PricingError(`El campo "${field}" debe ser un número mayor o igual a 0.`);
   }
+}
+
+/** Calcula los segundos de grabado estimados a partir del área (mm²) y la velocidad (s por cm²). */
+export function estimateEngravingSeconds(
+  widthMm: number,
+  heightMm: number,
+  secondsPerCm2: number,
+): { areaMm2: number; areaCm2: number; estimatedSeconds: number } {
+  const areaMm2 = widthMm * heightMm;
+  const areaCm2 = areaMm2 / 100;
+  const estimatedSeconds = areaCm2 * secondsPerCm2;
+  return { areaMm2, areaCm2, estimatedSeconds };
 }
 
 function findPrepOption(config: PricingConfig, prepOptionId: string) {
@@ -60,8 +73,35 @@ export function calculateQuote(
   if (!Number.isInteger(input.quantity) || input.quantity < 1) {
     throw new PricingError("La cantidad debe ser un entero mayor o igual a 1.");
   }
+  if (input.widthMm !== undefined) assertNonNegative(input.widthMm, "ancho del grabado (mm)");
+  if (input.heightMm !== undefined) assertNonNegative(input.heightMm, "alto del grabado (mm)");
 
   const prepOption = findPrepOption(config, input.prepOptionId);
+
+  let dimensions: EngravingDimensions | undefined;
+  let effectiveEngravedSeconds = input.totalEngravedSeconds;
+
+  if (
+    input.widthMm !== undefined &&
+    input.heightMm !== undefined &&
+    config.secondsPerCm2 !== undefined &&
+    config.secondsPerCm2 > 0
+  ) {
+    const { areaMm2, areaCm2, estimatedSeconds } = estimateEngravingSeconds(
+      input.widthMm,
+      input.heightMm,
+      config.secondsPerCm2,
+    );
+    dimensions = {
+      widthMm: input.widthMm,
+      heightMm: input.heightMm,
+      areaMm2: round2(areaMm2),
+      areaCm2: round2(areaCm2),
+      estimatedSeconds,
+      secondsPerCm2: config.secondsPerCm2,
+    };
+    effectiveEngravedSeconds = Math.max(input.totalEngravedSeconds, estimatedSeconds);
+  }
 
   const productBase = round2(input.baseProductCost);
 
@@ -83,7 +123,7 @@ export function calculateQuote(
   const wasteTotal = wasteBase * (config.wastePercentOverMaterials / 100);
 
   const includedSeconds = config.extraSeconds.includedSeconds;
-  const extraSeconds = Math.max(0, input.totalEngravedSeconds - includedSeconds);
+  const extraSeconds = Math.max(0, effectiveEngravedSeconds - includedSeconds);
   const extraEngravingTotal = extraSeconds * config.extraSeconds.costPerSecond;
 
   const operationalTotal =
@@ -135,7 +175,7 @@ export function calculateQuote(
       total: round2(operationalTotal),
     },
     extraEngraving: {
-      totalSeconds: input.totalEngravedSeconds,
+      totalSeconds: effectiveEngravedSeconds,
       includedSeconds,
       extraSeconds,
       costPerSecond: config.extraSeconds.costPerSecond,
@@ -160,6 +200,7 @@ export function calculateQuote(
     cost,
     prices,
     volumeDiscountPercent,
+    dimensions,
     totals: {
       minimum: round2(prices.minimum.roundedUnitPrice * input.quantity),
       recommended: round2(prices.recommended.roundedUnitPrice * input.quantity),

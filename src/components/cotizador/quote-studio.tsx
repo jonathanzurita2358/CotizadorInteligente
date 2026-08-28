@@ -35,6 +35,8 @@ export function QuoteStudio() {
   const [baseCost, setBaseCost] = useState("");
   const [machineMinutes, setMachineMinutes] = useState("");
   const [totalSeconds, setTotalSeconds] = useState("0");
+  const [widthMm, setWidthMm] = useState("");
+  const [heightMm, setHeightMm] = useState("");
   const [prepId, setPrepId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [analysis, setAnalysis] = useState<VisionAnalysis | null>(null);
@@ -99,6 +101,8 @@ export function QuoteStudio() {
           machineMinutes: Number(machineMinutes) || 0,
           totalEngravedSeconds: Number(totalSeconds) || 0,
           quantity: Math.trunc(Number(quantity)) || 1,
+          widthMm: widthMm !== "" ? Number(widthMm) : undefined,
+          heightMm: heightMm !== "" ? Number(heightMm) : undefined,
         },
         technique.config,
         settings.margins,
@@ -107,7 +111,7 @@ export function QuoteStudio() {
     } catch {
       return null;
     }
-  }, [technique, settings, prepId, baseCost, machineMinutes, totalSeconds, quantity]);
+  }, [technique, settings, prepId, baseCost, machineMinutes, totalSeconds, quantity, widthMm, heightMm]);
 
   const activeDiscountTier = technique?.config.volumeDiscounts
     .filter((t) => (Number(quantity) || 1) >= t.minQty)
@@ -136,6 +140,8 @@ export function QuoteStudio() {
             machineMinutes: Number(machineMinutes) || 0,
             totalEngravedSeconds: Number(totalSeconds) || 0,
             quantity: Math.trunc(Number(quantity)) || 1,
+            widthMm: widthMm !== "" ? Number(widthMm) : undefined,
+            heightMm: heightMm !== "" ? Number(heightMm) : undefined,
           },
           visionAnalysis: analysis,
         }),
@@ -155,8 +161,7 @@ export function QuoteStudio() {
 
   const currency = settings?.currency ?? "USD";
 
-  return (
-    <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
+  return (    <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
       <div className="space-y-4">
         <Card>
           <CardHeader title="Datos del pedido" />
@@ -266,6 +271,13 @@ export function QuoteStudio() {
                 ))}
               </Select>
             </div>
+            <DimensionsField
+              widthMm={widthMm}
+              heightMm={heightMm}
+              onWidthChange={setWidthMm}
+              onHeightChange={setHeightMm}
+              secondsPerCm2={technique?.config.secondsPerCm2}
+            />
           </CardBody>
         </Card>
       </div>
@@ -328,4 +340,69 @@ export function QuoteStudio() {
       </div>
     </div>
   );
+}
+
+function DimensionsField({
+  widthMm,
+  heightMm,
+  onWidthChange,
+  onHeightChange,
+  secondsPerCm2,
+}: {
+  widthMm: string;
+  heightMm: string;
+  onWidthChange: (v: string) => void;
+  onHeightChange: (v: string) => void;
+  secondsPerCm2?: number;
+}) {
+  const w = widthMm === "" ? NaN : Number(widthMm);
+  const h = heightMm === "" ? NaN : Number(heightMm);
+  const hasDimensions = widthMm !== "" && heightMm !== "";
+  const area = hasDimensions && !Number.isNaN(w) && !Number.isNaN(h) ? w * h : NaN;
+
+  return (
+    <fieldset className="rounded-lg border border-slate-200 p-3">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Dimensiones de grabado / marcaje
+      </legend>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label htmlFor="widthMm">Ancho (mm)</Label>
+          <Input
+            id="widthMm"
+            type="number"
+            min="0"
+            step="0.1"
+            value={widthMm}
+            onChange={(e) => onWidthChange(e.target.value)}
+            placeholder="0"
+          />
+        </div>
+        <div>
+          <Label htmlFor="heightMm">Alto (mm)</Label>
+          <Input
+            id="heightMm"
+            type="number"
+            min="0"
+            step="0.1"
+            value={heightMm}
+            onChange={(e) => onHeightChange(e.target.value)}
+            placeholder="0"
+          />
+        </div>
+      </div>
+      {hasDimensions && !Number.isNaN(area) && (
+        <p className="mt-2 text-[11px] text-slate-500">
+          Área de grabado: {w} × {h} mm = {formatNumber(area)} mm² / {formatNumber(area / 100)} cm²
+          {secondsPerCm2 !== undefined && secondsPerCm2 > 0 && (
+            <> · estimado ≈ {formatNumber((area / 100) * secondsPerCm2)} s</>
+          )}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 }).format(value);
 }

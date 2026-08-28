@@ -206,6 +206,72 @@ describe("calculateQuote — escalado por cantidad", () => {
   });
 });
 
+describe("calculateQuote — dimensiones de grabado y tiempo por área", () => {
+  const areaConfig: PricingConfig = {
+    ...fixtureConfig,
+    secondsPerCm2: 2,
+  };
+
+  it("calcula área y segundos estimados a partir de ancho/alto en mm", () => {
+    const result = calculateQuote(
+      { ...baseInput, widthMm: 50, heightMm: 30 },
+      areaConfig,
+      fixtureMargins,
+      fixtureRounding,
+    );
+    expect(result.dimensions).toBeDefined();
+    expect(result.dimensions!.widthMm).toBe(50);
+    expect(result.dimensions!.heightMm).toBe(30);
+    expect(result.dimensions!.areaMm2).toBe(1500);
+    expect(result.dimensions!.areaCm2).toBe(15);
+    expect(result.dimensions!.estimatedSeconds).toBe(30);
+  });
+
+  it("usa el mayor entre segundos manuales y estimados por área para el costo extra", () => {
+    const result = calculateQuote(
+      { ...baseInput, widthMm: 50, heightMm: 30, totalEngravedSeconds: 10 },
+      areaConfig,
+      fixtureMargins,
+      fixtureRounding,
+    );
+    expect(result.cost.extraEngraving.totalSeconds).toBe(30);
+    expect(result.cost.extraEngraving.extraSeconds).toBe(0);
+  });
+
+  it("no aplica tiempo por área si secondsPerCm2 no está configurado", () => {
+    const result = calculateQuote(
+      { ...baseInput, widthMm: 50, heightMm: 30 },
+      fixtureConfig,
+      fixtureMargins,
+      fixtureRounding,
+    );
+    expect(result.dimensions).toBeUndefined();
+    expect(result.cost.extraEngraving.totalSeconds).toBe(90);
+  });
+
+  it("no aplica tiempo por área si faltan dimensiones", () => {
+    const result = calculateQuote(
+      { ...baseInput, widthMm: 50 },
+      areaConfig,
+      fixtureMargins,
+      fixtureRounding,
+    );
+    expect(result.dimensions).toBeUndefined();
+    expect(result.cost.extraEngraving.totalSeconds).toBe(90);
+  });
+
+  it("rechaza dimensiones negativas", () => {
+    expect(() =>
+      calculateQuote(
+        { ...baseInput, widthMm: -5, heightMm: 30 },
+        areaConfig,
+        fixtureMargins,
+        fixtureRounding,
+      ),
+    ).toThrow(PricingError);
+  });
+});
+
 describe("inmutabilidad", () => {
   it("no muta entradas profundamente congeladas ni falla al operar sobre ellas", () => {
     const config = deepFreeze(structuredClone(fixtureConfig));

@@ -26,6 +26,8 @@ export interface PricingConfig {
   prepOptions: PrepOption[];
   extraSeconds: ExtraSecondsConfig;
   volumeDiscounts: VolumeDiscountTier[];
+  /** Velocidad de máquina: segundos de grabado por cm² de superficie. Opcional. */
+  secondsPerCm2?: number;
 }
 
 export interface MarginConfig {
@@ -47,6 +49,10 @@ export interface QuoteInput {
   machineMinutes: number;
   totalEngravedSeconds: number;
   quantity: number;
+  /** Ancho del grabado / marcaje en milímetros. Opcional. */
+  widthMm?: number;
+  /** Alto del grabado / marcaje en milímetros. Opcional. */
+  heightMm?: number;
 }
 
 export interface MachineCostLine {
@@ -75,6 +81,16 @@ export interface ExtraEngravingCostLine {
   extraSeconds: number;
   costPerSecond: number;
   total: number;
+}
+
+export interface EngravingDimensions {
+  widthMm: number;
+  heightMm: number;
+  areaMm2: number;
+  areaCm2: number;
+  /** Segundos de grabado estimados según el área y la velocidad configurada. */
+  estimatedSeconds: number;
+  secondsPerCm2: number;
 }
 
 export interface CostBreakdown {
@@ -108,6 +124,8 @@ export interface QuoteResult {
   prices: Record<PriceTierLabel, PricePoint>;
   volumeDiscountPercent: number;
   totals: QuoteTotals;
+  /** Dimensiones del grabado y tiempo estimado de procesamiento (si se proveen). */
+  dimensions?: EngravingDimensions;
 }
 
 export class PricingError extends Error {}

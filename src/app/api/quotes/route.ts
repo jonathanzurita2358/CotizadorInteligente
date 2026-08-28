@@ -64,6 +64,8 @@ export async function POST(request: Request) {
     machineMinutes: input.machineMinutes,
     totalEngravedSeconds: input.totalEngravedSeconds,
     quantity: Math.trunc(input.quantity),
+    widthMm: typeof input.widthMm === "number" ? input.widthMm : undefined,
+    heightMm: typeof input.heightMm === "number" ? input.heightMm : undefined,
   };
 
   try {

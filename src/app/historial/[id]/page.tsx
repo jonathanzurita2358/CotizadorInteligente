@@ -93,6 +93,20 @@ export default async function QuoteDetailPage({
               <Row label="Cantidad" value={String(quote.quantity)} plain />
               <Row label="Tiempo de máquina" value={`${snap.input.machineMinutes} min`} plain />
               <Row label="Segundos grabados" value={String(snap.input.totalEngravedSeconds)} plain />
+              {snap.input.widthMm !== undefined && snap.input.heightMm !== undefined && (
+                <Row
+                  label="Dimensiones de grabado"
+                  value={`${snap.input.widthMm} × ${snap.input.heightMm} mm`}
+                  plain
+                />
+              )}
+              {snap.result?.dimensions && (
+                <Row
+                  label="Área"
+                  value={`${snap.result.dimensions.areaMm2} mm² / ${snap.result.dimensions.areaCm2} cm²`}
+                  plain
+                />
+              )}
             </CardBody>
           </Card>
 

@@ -33,6 +33,7 @@ const DEFAULT_CONFIG: Record<string, unknown> = {
     { id: "from_scratch", label: "Diseño desde cero", cost: 8 },
   ],
   extraSeconds: { costPerSecond: 0.002, includedSeconds: 180 },
+  secondsPerCm2: 1.5,
   volumeDiscounts: [
     { minQty: 10, discountPercent: 5 },
     { minQty: 25, discountPercent: 10 },

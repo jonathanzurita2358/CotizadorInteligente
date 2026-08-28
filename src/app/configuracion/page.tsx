@@ -440,6 +440,19 @@ export default function ConfiguracionPage() {
                       }
                     />
                   </div>
+                  <div className="mt-3">
+                    <NumberField
+                      label="Velocidad: segundos por cm² (para técnicas por área, ej. láser)"
+                      step="0.01"
+                      value={selected.config.secondsPerCm2 ?? 0}
+                      onChange={(v) =>
+                        updateConfig(selected, setTechniques, "secondsPerCm2", v)
+                      }
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Si es mayor a 0 y se ingresan ancho/alto en mm, se estima el tiempo de procesamiento por área.
+                    </p>
+                  </div>
                 </Section>
 
                 <Section title="Descuentos por volumen">
