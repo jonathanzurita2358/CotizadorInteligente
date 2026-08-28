@@ -4,6 +4,28 @@
   --brand: #dc2626;
 }
 
+html,
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-image: url("https://res.cloudinary.com/qiyxeayj/image/upload/v1787332520/fondo.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Capa oscura translúcida para mejorar el contraste sobre el fondo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(15, 15, 25, 0.35);
+  pointer-events: none;
+}
+
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
