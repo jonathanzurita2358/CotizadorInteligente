@@ -359,6 +359,7 @@ function DimensionsField({
   const h = heightMm === "" ? NaN : Number(heightMm);
   const hasDimensions = widthMm !== "" && heightMm !== "";
   const area = hasDimensions && !Number.isNaN(w) && !Number.isNaN(h) ? w * h : NaN;
+  const rate = secondsPerCm2 !== undefined && secondsPerCm2 > 0 ? secondsPerCm2 : 15;
 
   return (
     <fieldset className="rounded-lg border border-slate-200 p-3">
@@ -393,10 +394,8 @@ function DimensionsField({
       </div>
       {hasDimensions && !Number.isNaN(area) && (
         <p className="mt-2 text-[11px] text-slate-500">
-          Área de grabado: {w} × {h} mm = {formatNumber(area)} mm² / {formatNumber(area / 100)} cm²
-          {secondsPerCm2 !== undefined && secondsPerCm2 > 0 && (
-            <> · estimado ≈ {formatNumber((area / 100) * secondsPerCm2)} s</>
-          )}
+          Área: {formatNumber(area / 100)} cm² ({w}×{h} mm){" "}
+          | Tiempo est. grabado: {formatNumber((area / 100) * rate / 60)} min @ {rate} s/cm²
         </p>
       )}
     </fieldset>

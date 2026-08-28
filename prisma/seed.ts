@@ -21,6 +21,7 @@ const laserConfig = {
     costPerSecond: 0.002,
     includedSeconds: 180,
   },
+  secondsPerCm2: 15,
   volumeDiscounts: [
     { minQty: 10, discountPercent: 5 },
     { minQty: 25, discountPercent: 10 },

@@ -13,6 +13,9 @@ import {
   type RoundingConfig,
 } from "./types";
 
+/** Velocidad de máquina por defecto (segundos por cm²) si la técnica no la define. */
+export const DEFAULT_SECONDS_PER_CM2 = 15;
+
 function assertNonNegative(value: number, field: string): void {
   if (typeof value !== "number" || Number.isNaN(value) || value < 0) {
     throw new PricingError(`El campo "${field}" debe ser un número mayor o igual a 0.`);
@@ -78,34 +81,38 @@ export function calculateQuote(
 
   const prepOption = findPrepOption(config, input.prepOptionId);
 
-  let dimensions: EngravingDimensions | undefined;
-  let effectiveEngravedSeconds = input.totalEngravedSeconds;
+  const secondsPerCm2 =
+    config.secondsPerCm2 !== undefined && config.secondsPerCm2 > 0
+      ? config.secondsPerCm2
+      : DEFAULT_SECONDS_PER_CM2;
 
-  if (
-    input.widthMm !== undefined &&
-    input.heightMm !== undefined &&
-    config.secondsPerCm2 !== undefined &&
-    config.secondsPerCm2 > 0
-  ) {
+  const hasDimensions =
+    input.widthMm !== undefined && input.heightMm !== undefined;
+
+  let dimensions: EngravingDimensions | undefined;
+  let engravedSeconds = input.totalEngravedSeconds;
+  let machineMinutes = input.machineMinutes;
+
+  if (hasDimensions) {
     const { areaMm2, areaCm2, estimatedSeconds } = estimateEngravingSeconds(
-      input.widthMm,
-      input.heightMm,
-      config.secondsPerCm2,
+      input.widthMm as number,
+      input.heightMm as number,
+      secondsPerCm2,
     );
     dimensions = {
-      widthMm: input.widthMm,
-      heightMm: input.heightMm,
+      widthMm: input.widthMm as number,
+      heightMm: input.heightMm as number,
       areaMm2: round2(areaMm2),
       areaCm2: round2(areaCm2),
       estimatedSeconds,
-      secondsPerCm2: config.secondsPerCm2,
+      secondsPerCm2,
     };
-    effectiveEngravedSeconds = Math.max(input.totalEngravedSeconds, estimatedSeconds);
+    engravedSeconds = estimatedSeconds;
+    machineMinutes = input.machineMinutes + estimatedSeconds / 60;
   }
 
   const productBase = round2(input.baseProductCost);
 
-  const machineMinutes = input.machineMinutes;
   const machineTotal = machineMinutes * config.machineCostPerMinute;
 
   const kwhUsed = config.electricityKw * (machineMinutes / 60);
@@ -123,7 +130,7 @@ export function calculateQuote(
   const wasteTotal = wasteBase * (config.wastePercentOverMaterials / 100);
 
   const includedSeconds = config.extraSeconds.includedSeconds;
-  const extraSeconds = Math.max(0, effectiveEngravedSeconds - includedSeconds);
+  const extraSeconds = Math.max(0, engravedSeconds - includedSeconds);
   const extraEngravingTotal = extraSeconds * config.extraSeconds.costPerSecond;
 
   const operationalTotal =
@@ -175,7 +182,7 @@ export function calculateQuote(
       total: round2(operationalTotal),
     },
     extraEngraving: {
-      totalSeconds: effectiveEngravedSeconds,
+      totalSeconds: engravedSeconds,
       includedSeconds,
       extraSeconds,
       costPerSecond: config.extraSeconds.costPerSecond,

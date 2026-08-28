@@ -207,15 +207,10 @@ describe("calculateQuote — escalado por cantidad", () => {
 });
 
 describe("calculateQuote — dimensiones de grabado y tiempo por área", () => {
-  const areaConfig: PricingConfig = {
-    ...fixtureConfig,
-    secondsPerCm2: 2,
-  };
-
   it("calcula área y segundos estimados a partir de ancho/alto en mm", () => {
     const result = calculateQuote(
       { ...baseInput, widthMm: 50, heightMm: 30 },
-      areaConfig,
+      { ...fixtureConfig, secondsPerCm2: 2 },
       fixtureMargins,
       fixtureRounding,
     );
@@ -227,44 +222,51 @@ describe("calculateQuote — dimensiones de grabado y tiempo por área", () => {
     expect(result.dimensions!.estimatedSeconds).toBe(30);
   });
 
-  it("usa el mayor entre segundos manuales y estimados por área para el costo extra", () => {
+  it("recalcula los minutos de máquina y el costo de máquina en función del área", () => {
     const result = calculateQuote(
-      { ...baseInput, widthMm: 50, heightMm: 30, totalEngravedSeconds: 10 },
-      areaConfig,
+      { ...baseInput, widthMm: 50, heightMm: 30 },
+      { ...fixtureConfig, secondsPerCm2: 2, machineCostPerMinute: 2.5 },
       fixtureMargins,
       fixtureRounding,
     );
-    expect(result.cost.extraEngraving.totalSeconds).toBe(30);
-    expect(result.cost.extraEngraving.extraSeconds).toBe(0);
+    // 15 cm² × 2 s/cm² = 30 s extra = 0.5 min sobre los 30 min base -> 30.5 min
+    const expectedMachineMinutes =
+      baseInput.machineMinutes + result.dimensions!.estimatedSeconds / 60;
+    expect(expectedMachineMinutes).toBeCloseTo(30.5, 6);
+    expect(result.cost.machine.minutes).toBeCloseTo(30.5, 6);
+    expect(result.cost.machine.total).toBeCloseTo(30.5 * 2.5, 6);
   });
 
-  it("no aplica tiempo por área si secondsPerCm2 no está configurado", () => {
+  it("usa por defecto 15 s/cm² cuando la técnica no define secondsPerCm2", () => {
     const result = calculateQuote(
-      { ...baseInput, widthMm: 50, heightMm: 30 },
+      { ...baseInput, widthMm: 10, heightMm: 10 },
+      fixtureConfig,
+      fixtureMargins,
+      fixtureRounding,
+    );
+    // 1 cm² × 15 s = 15 s
+    expect(result.dimensions).toBeDefined();
+    expect(result.dimensions!.secondsPerCm2).toBe(15);
+    expect(result.dimensions!.estimatedSeconds).toBe(15);
+  });
+
+  it("no aplica tiempo por área si faltan dimensiones", () => {
+    const result = calculateQuote(
+      { ...baseInput, widthMm: 50 },
       fixtureConfig,
       fixtureMargins,
       fixtureRounding,
     );
     expect(result.dimensions).toBeUndefined();
     expect(result.cost.extraEngraving.totalSeconds).toBe(90);
-  });
-
-  it("no aplica tiempo por área si faltan dimensiones", () => {
-    const result = calculateQuote(
-      { ...baseInput, widthMm: 50 },
-      areaConfig,
-      fixtureMargins,
-      fixtureRounding,
-    );
-    expect(result.dimensions).toBeUndefined();
-    expect(result.cost.extraEngraving.totalSeconds).toBe(90);
+    expect(result.cost.machine.minutes).toBe(30);
   });
 
   it("rechaza dimensiones negativas", () => {
     expect(() =>
       calculateQuote(
         { ...baseInput, widthMm: -5, heightMm: 30 },
-        areaConfig,
+        fixtureConfig,
         fixtureMargins,
         fixtureRounding,
       ),

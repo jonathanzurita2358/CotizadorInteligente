@@ -38,11 +38,9 @@ export function ResultsPanel({ result, currency }: ResultsPanelProps) {
         <CardBody className="space-y-1.5">
           {dimensions && (
             <div className="mb-1 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              Dimensiones de grabado: <strong>{dimensions.widthMm} × {dimensions.heightMm} mm</strong> ={" "}
-              {dimensions.areaMm2} mm² / {dimensions.areaCm2} cm²
-              {dimensions.estimatedSeconds > 0 && (
-                <> · tiempo estimado ≈ {Math.round(dimensions.estimatedSeconds)} s</>
-              )}
+              Área: <strong>{dimensions.areaCm2} cm²</strong> ({dimensions.widthMm}×{dimensions.heightMm} mm){" "}
+              | Tiempo est. grabado: <strong>{formatMinutes(dimensions.estimatedSeconds)} min</strong>{" "}
+              @ {dimensions.secondsPerCm2} s/cm²
             </div>
           )}
           <CostLine label="Producto base" value={cost.productBase} currency={currency} />
@@ -161,6 +159,10 @@ function CostLine({
       </span>
     </div>
   );
+}
+
+function formatMinutes(seconds: number): string {
+  return (seconds / 60).toFixed(1);
 }
 
 function PriceCard({
